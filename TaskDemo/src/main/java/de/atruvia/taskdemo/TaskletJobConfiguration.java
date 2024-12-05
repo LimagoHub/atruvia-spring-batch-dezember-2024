@@ -38,6 +38,19 @@ public class TaskletJobConfiguration {
 
     }
 
+    @Bean
+    public Step meinFinishStep(JobRepository repository, PlatformTransactionManager transactionManager)
+    {
+        return new StepBuilder("meinFinishStep", repository).tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(final StepContribution contribution, final ChunkContext chunkContext) throws Exception {
+                System.out.println(chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get("myKey") );
+                return RepeatStatus.FINISHED;
+            }
+        },transactionManager).build();
+
+    }
+
 
 
     @Bean
@@ -53,7 +66,7 @@ public class TaskletJobConfiguration {
                 int anzahlDerDurchzufuerendenSteps = ( anz != null ) ? Integer.parseInt( anz ) : 4;
 
                 long commitCount = chunkContext.getStepContext().getStepExecution().getCommitCount();
-
+                chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("myKey", anzahlDerDurchzufuerendenSteps);
 
                 System.out.println( "Hallo Spring Batch mit Tasklet, Tasklet-Execution " + commitCount );
                 return ( commitCount < anzahlDerDurchzufuerendenSteps - 1 ) ? RepeatStatus.CONTINUABLE : RepeatStatus.FINISHED;
@@ -67,7 +80,7 @@ public class TaskletJobConfiguration {
         return new JobBuilder("meinTaskletJob", repository).incrementer( new RunIdIncrementer() )
                 .start( meinLeerzeilenStep())
                 .next(  meinArbeitsStep() )
-                .next(  meinLeerzeilenStep() )
+                .next(  meinFinishStep(repository, transactionManager) )
 
                 .build();
     }
