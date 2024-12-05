@@ -1,11 +1,12 @@
 package de.atruvia.verzweigungdemo;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.*;
+import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.job.flow.FlowExecutionStatus;
+import org.springframework.batch.core.job.flow.JobExecutionDecider;
+import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -88,13 +89,42 @@ public class ConditionalFlowJobConfiguration {
 
     }
 
+    /*
+    public class MyDecider implements JobExecutionDecider {
+    @Override
+    public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
+        String exitCode = stepExecution.getExitStatus().getExitCode();
+        if (exitCode.equals(ExitStatus.FAILED.getExitCode())) {
+            return new FlowExecutionStatus("FAILED_CUSTOM");
+        } else {
+            return new FlowExecutionStatus("COMPLETED");
+        }
+    }
+}
+
+
+    @Bean
+    public Flow exampleFlow() {
+        Step step1 = stepBuilderFactory.get("step1").tasklet(myTasklet()).build();
+        Step step2 = stepBuilderFactory.get("step2").tasklet(myTasklet()).build();
+
+        return new FlowBuilder<SimpleFlow>("exampleFlow")
+                .start(step1)
+                .next(step2)
+                .end();
+    }
+*/
+
     @Bean
     public Job meinTaskletJob() throws Exception
     {
         return new JobBuilder("jobAbc", repository)
                 .incrementer( new RunIdIncrementer() )
-                .flow( arbeitsStep() ).on( ExitStatus.FAILED.getExitCode() ).to( fehlerbehandlungsStep() ).next( abschliessenderStep() )
-                .from( arbeitsStep() ).on( "*" ).to( okStep() ).next( abschliessenderStep() )
+                .start( arbeitsStep() )
+                    .on("FAILED" ).to( fehlerbehandlungsStep() )
+     //               .next( abschliessenderStep() )
+                .from( arbeitsStep() ).on( "*" ).to( okStep() )
+                        .next( abschliessenderStep() )
                 .end().build();
     }
 }
