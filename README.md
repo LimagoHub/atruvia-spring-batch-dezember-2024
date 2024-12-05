@@ -1,0 +1,1 @@
+# atruvia-spring-batch-dezember-2024
