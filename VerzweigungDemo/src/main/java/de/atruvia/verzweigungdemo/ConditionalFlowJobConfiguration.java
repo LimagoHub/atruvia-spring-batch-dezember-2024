@@ -113,6 +113,23 @@ public class ConditionalFlowJobConfiguration {
                 .next(step2)
                 .end();
     }
+
+    @Bean
+public Job exampleJob(JobBuilderFactory jobBuilders, StepBuilderFactory stepBuilders) {
+    Step taskletStep = stepBuilders.get("taskletStep")
+                                   .tasklet(myTasklet())
+                                   .build();
+
+    JobExecutionDecider decider = new MyDecider();
+
+    return jobBuilders.get("exampleJob")
+                      .start(taskletStep)
+                      .next(decider)
+                      .on("CONTINUE").to(taskletStep) // Wiederholung des Tasklets bei bestimmter Bedingung
+                      .from(decider)
+                      .on("COMPLETE").end() // Beendigung des Jobs
+                      .build();
+}
 */
 
     @Bean
