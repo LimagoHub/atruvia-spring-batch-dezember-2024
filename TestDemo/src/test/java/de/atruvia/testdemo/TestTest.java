@@ -6,10 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.internal.matchers.Equals;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.*;
+import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
@@ -25,6 +24,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import javax.sql.DataSource;
 import java.io.File;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +42,7 @@ public class TestTest {
 
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired private JobExplorer jobExplorer;
     @Autowired
     public void setDataSource(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -68,8 +69,33 @@ public class TestTest {
 
         this.jobLauncherTestUtils.setJob(job);
         JobExecution jobExecution = jobLauncherTestUtils.launchJob(param);
+        printStepExecutions(jobExecution);
         assertThat(new File("input.json")).hasSameTextualContentAs(new File("output.json"));
         assertThat(jobExecution.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
+
+
+    }
+
+    /** Zeige die StepExecutions, die JobExecution und den Job-ExecutionContext */
+    private static void printStepExecutions( JobExecution je )
+    {
+        for( StepExecution se : je.getStepExecutions() ) {
+            String s = se.getExitStatus().getExitDescription();
+            if( s != null && s.length() > 0 ) { s = ", ExitDescription = " + s; }
+            System.out.println( "StepExecution " + se.getId() + ": CommitCount = " + se.getCommitCount() +
+                    ", Status = " + se.getStatus() + ", ExitStatus = " + se.getExitStatus().getExitCode() +
+                    ", StepName = " + se.getStepName() + s );
+        }
+        String s = je.getExitStatus().getExitDescription();
+        if( s != null && s.length() > 0 ) { s = ", ExitDescription = " + s; }
+        System.out.println( "JobExecution  " + je.getId() + ": JobId = " + je.getJobId() +
+                ",       Status = " + je.getStatus() + ", ExitStatus = " + je.getExitStatus().getExitCode() + s );
+        ExecutionContext ec = je.getExecutionContext();
+        if( ec != null && !ec.isEmpty() ) {
+            for( Map.Entry<String, Object> e : ec.entrySet() ) {
+                System.out.println( "Job-ExecutionContext: " + e.getKey() + ": " + e.getValue() );
+            }
+        }
     }
 
 }
